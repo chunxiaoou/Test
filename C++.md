@@ -124,8 +124,13 @@ your-project/ </br>
     }
   ]
 }
+
+* 若在 configurePresets 無特別指定 "generator"，且若使用 MSVC 則會預設使用 (MSBuild)
+Visual Studio (MSBuild) :	.sln, .vcxproj, .vcxproj.filters
+MinGW Makefiles	Makefile:  .o、.a、.exe
+Ninja	build.ninja: .o、.a、.so
+
 ```
 
-Visual Studio (MSBuild)	.sln, .vcxproj, .vcxproj.filters
-MinGW Makefiles	Makefile, .o、.a、.exe
-Ninja	build.ninja, .o、.a、.so
+
+
