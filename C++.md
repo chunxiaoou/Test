@@ -6,32 +6,53 @@ cmake -S . -B build   執行CMake Configure
 
 
 ### 語法介紹
-```
-file(GLOB SOURCES "src/**/*.cpp" "src/*.cpp") </br> 
-add_executable(${PROJECT_NAME} ${SOURCES})
-```
-<pre> 
-抓取 src資料夾 .cpp檔案至 "SOURCES"/ "HEADER"，添加可執行文件 
-</pre>
-
-```
-target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_20)
-```
-<pre> 
-指定使用語法版本 
-</pre>
-
-```
-add_library(${PROJECT_NAME} (STATIC/ SHARED/ INTERFACE) ${SOURCES} ${HEADERS})
-```
 <pre>
-STATIC：產生 .a 或 .lib
-SHARED：產生 .so 或 .dll
-INTERFACE：只定義介面，沒有實體檔案（常用於 header-only 函式庫）
-
-在 Windows 上構建 = .lib 靜態庫 
-交叉編譯到 Android = .a 靜態庫
+file(GLOB SOURCES "src/**/*.cpp" "src/*.cpp")    // 抓取 src資料夾 .cpp檔案至 "SOURCES"/ "HEADER"，添加可執行文件 
 </pre>
+
+<pre> 
+add_executable(${PROJECT_NAME} ${SOURCES} ${HEADER})    // 輸出"可執行檔"
+</pre>
+
+<pre>
+target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_20)      // 指定使用語法版本
+</pre>
+
+<pre>
+add_library(${PROJECT_NAME} (STATIC/ SHARED/ INTERFACE) ${SOURCES} ${HEADERS})
+
+// STATIC：產生 .a 或 .lib
+// SHARED：產生 .so 或 .dll
+// INTERFACE：只定義介面，沒有實體檔案（常用於 header-only 函式庫）
+// 在 Windows 上構建 = .lib 靜態庫 
+// 交叉編譯到 Android = .a 靜態庫 
+</pre>
+
+<pre>
+add_subdirectory(src)    // src為資料夾名稱 (引用 ./src/CMakeLists.txt)
+</pre>
+
+<pre>
+find_package(Boost CONFIG REQUIRED ONLY_CMAKE_FIND_ROOT_PATH)
+
+// 用來查找並載入外部庫的信息，它會：
+// 尋找已安裝的庫或包
+// 載入該包提供的設置和變量
+// 有時會定義導入的目標(imported targets)
+// Ex: 指定路徑尋找 Boost 庫的配置文件，並載入相關信息（包括頭文件路徑、庫文件位置等）。
+</pre>
+
+<pre>
+target_include_directories(${PROJECT_NAME} PUBLIC ${SASLib_INCLUDE_DIRS})    
+// 此命令用於指定目標（如可執行文件或庫）需要的頭文件包含路徑
+
+target_link_directories(${PROJECT_NAME} PRIVATE ${SASLib_LIBRARY_DIRS})    
+//用於指定查找庫文件時要搜索的目錄路徑
+
+target_link_libraries(${PROJECT_NAME} PRIVATE ${SASLib_LIBRARIES})      
+//此命令指定目標需要鏈接的庫
+</pre>
+
 
 
 ### CMakePresets.json & CMakeUserPresets.json
@@ -59,14 +80,21 @@ your-project/ </br>
   },
   "configurePresets": [
     {
-      "name": "default",
-      "displayName": "Default Build",
-      "description": "Configure with default settings",
-      "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build/default",
-      "cacheVariables": {
+      "name": "default",                                  // 此 preset 的 ID 名稱
+      "displayName": "Default Build",  
+      "description": "Configure with default settings",   // 顯示用的文字敘述
+      "generator": "Ninja",                               // CMake 用來產生 build 系統的工具（如 Ninja, MinGW Makefiles）
+      "binaryDir": "${sourceDir}/build/default",          // CMake 生成檔案的資料夾路徑
+      "cacheVariables": {                                 // -DVAR=VAL	設定變數 VAR 的值為 VAL，會寫入 CMakeCache.txt | cmake -DMY_FEATURE=ON (宣告 MY_FEATURE = ON)
         "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "$env{ANDROID_NDK}/toolchains/llvm/prebuilt/windows-x86_64/bin/clang",
+        "CMAKE_CXX_COMPILER": "$env{ANDROID_NDK}/toolchains/llvm/prebuilt/windows-x86_64/bin/clang++",
+        "CMAKE_LINKER": "$env{ANDROID_NDK}/toolchains/llvm/prebuilt/windows-x86_64/bin/ld",
+        "ANDROID_NDK": "$env{ANDROID_NDK}",
+        "ANDROID_ABI": "arm64-v8a",
+        "ANDROID_PLATFORM": "android-22"
       }
     },
     {
@@ -82,35 +110,21 @@ your-project/ </br>
   "buildPresets": [
     {
       "name": "build-default",
-      "configurePreset": "default"
+      "configurePreset": "default"      // 建構時用哪個 configure preset（必填）
     },
     {
       "name": "build-release",
-      "configurePreset": "release"
+      "configurePreset": "release"      // 建構時用哪個 configure preset（必填）
     }
   ],
   "testPresets": [
     {
       "name": "test-default",
-      "configurePreset": "default"
+      "configurePreset": "default"      // 建構時用哪個 configure preset（必填）
     }
   ]
 }
 ```
-
-| 欄位 | 功能 | 舉例 |
-| :--: | :-- | :-- |
-| name  | 此 preset 的 ID 名稱 |
-| inherits | 從其他 preset 繼承欄位（可重用設定） |
-| description | 顯示用的文字敘述 |
-| binaryDir | CMake 生成檔案的資料夾路徑 |
-| generator | CMake 用來產生 build 系統的工具（如 Ninja, MinGW Makefiles） |
-| toolchainFile | 	指定交叉編譯所用的工具鏈 |
-| cacheVariables  | -DVAR=VAL	設定變數 VAR 的值為 VAL，會寫入 CMakeCache.txt | cmake -DMY_FEATURE=ON (宣告 MY_FEATURE = ON) |
-| configurePreset | 建構時用哪個 configure preset（必填）|
-| configuration | Debug / Release 等編譯型態（multi-config generator 專用）|
-
-
 
 Visual Studio (MSBuild)	.sln, .vcxproj, .vcxproj.filters
 MinGW Makefiles	Makefile, .o、.a、.exe
